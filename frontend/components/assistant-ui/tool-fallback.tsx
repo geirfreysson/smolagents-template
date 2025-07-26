@@ -2,6 +2,7 @@ import { ToolCallContentPartComponent } from "@assistant-ui/react";
 import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from "lucide-react";
 import { useState } from "react";
 import { Button } from "../ui/button";
+import { getToolDisplayName } from "../../lib/tool-display-names";
 
 export const ToolFallback: ToolCallContentPartComponent = ({
   toolName,
@@ -14,7 +15,7 @@ export const ToolFallback: ToolCallContentPartComponent = ({
       <div className="flex items-center gap-2 px-4">
         <CheckIcon className="size-4" />
         <p className="">
-          Used tool: <b>{toolName}</b>
+          <b>{getToolDisplayName(toolName)}</b>
         </p>
         <div className="flex-grow" />
         <Button onClick={() => setIsCollapsed(!isCollapsed)}>

@@ -1,6 +1,7 @@
 import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from "lucide-react";
 import { useState } from "react";
 import { Button } from "../ui/button";
+import { getToolDisplayName } from "../../lib/tool-display-names";
 
 interface ToolCallDisplayProps {
   toolName: string;
@@ -30,7 +31,7 @@ export const ToolCallDisplay = ({ toolName, arguments: args, result }: ToolCallD
       <div className="flex items-center gap-2 px-4">
         <CheckIcon className="size-4" />
         <p className="">
-          Used tool: <b>{toolName}</b>
+          <b>{getToolDisplayName(toolName)}</b>
         </p>
         <div className="flex-grow" />
         <Button onClick={() => setIsCollapsed(!isCollapsed)} variant="ghost" size="sm">
