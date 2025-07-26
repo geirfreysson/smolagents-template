@@ -9,6 +9,9 @@ export const EnhancedText: TextContentPartComponent = (props) => {
   
   // Check if this text contains tool calls
   if (typeof text === 'string' && text.includes('__TOOL_CALL__:')) {
+    // First pass: check if we have a final_answer tool
+    const hasFinalAnswer = text.includes('"name":"final_answer"');
+    
     const renderedParts: ReactNode[] = [];
     let currentIndex = 0;
     
@@ -17,9 +20,10 @@ export const EnhancedText: TextContentPartComponent = (props) => {
       const toolCallStart = text.indexOf('__TOOL_CALL__:', currentIndex);
       
       if (toolCallStart === -1) {
-        // No more tool calls, add remaining text
+        // No more tool calls, add remaining text only if we don't have a final_answer tool
+        // (since final_answer tool already displays the final response prominently)
         const remainingText = text.slice(currentIndex).trim();
-        if (remainingText) {
+        if (remainingText && !hasFinalAnswer) {
           renderedParts.push(
             <div key={`text-end`} className="prose">
               {remainingText}
@@ -29,10 +33,10 @@ export const EnhancedText: TextContentPartComponent = (props) => {
         break;
       }
       
-      // Add any text before the tool call
+      // Add any text before the tool call (only if we don't have final_answer)
       if (toolCallStart > currentIndex) {
         const textBefore = text.slice(currentIndex, toolCallStart).trim();
-        if (textBefore) {
+        if (textBefore && !hasFinalAnswer) {
           renderedParts.push(
             <div key={`text-${renderedParts.length}`} className="prose">
               {textBefore}
