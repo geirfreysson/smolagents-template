@@ -1,4 +1,3 @@
-import { NextResponse } from "next/server";
 
 export const runtime = "edge";
 export const maxDuration = 30;
@@ -18,13 +17,13 @@ export async function POST(req: Request) {
     } else if (Array.isArray(latestMessage?.content)) {
       // Extract text from content array format
       userMessageText = latestMessage.content
-        .filter((part: any) => part.type === "text")
-        .map((part: any) => part.text)
+        .filter((part: { type: string }) => part.type === "text")
+        .map((part: { text: string }) => part.text)
         .join(" ");
     }
     
     // Prepare conversation history (exclude the latest message as it's sent separately)
-    const conversationHistory = messages.slice(0, -1).map((msg: any) => ({
+    const conversationHistory = messages.slice(0, -1).map((msg: { role: string; content: string }) => ({
       role: msg.role,
       content: msg.content
     }));
@@ -47,12 +46,9 @@ export async function POST(req: Request) {
     }
 
     // Create a transform stream to convert backend events to assistant-ui format
+    const activeCalls = new Map(); // Track active tool calls
+    
     const transformStream = new TransformStream({
-      start() {
-        // Track the current state
-        this.currentText = "";
-      },
-      
       transform(chunk, controller) {
         const decoder = new TextDecoder();
         const text = decoder.decode(chunk);
@@ -67,16 +63,30 @@ export async function POST(req: Request) {
               
               switch (eventData.type) {
                 case 'tool_call_start':
-                  // Send tool call start notification
-                  const toolStartText = `\n\n🔧 **Calling tool: ${eventData.tool_name}**\nArguments: ${JSON.stringify(eventData.tool_arguments, null, 2)}\n\n`;
-                  controller.enqueue(new TextEncoder().encode(`0:${JSON.stringify(toolStartText)}\n`));
+                  // Store tool call for later completion
+                  activeCalls.set(eventData.tool_call_id, {
+                    name: eventData.tool_name,
+                    arguments: eventData.tool_arguments
+                  });
+                  // Don't send anything yet, wait for completion
                   break;
                   
                 case 'tool_call_complete':
                 case 'tool_call_final':
-                  // Send tool completion with result
-                  const toolCompleteText = `✅ **${eventData.tool_name} completed**\nResult: ${eventData.result}\n\n`;
-                  controller.enqueue(new TextEncoder().encode(`0:${JSON.stringify(toolCompleteText)}\n`));
+                  // Send complete tool call information as a single message part
+                  const toolCall = activeCalls.get(eventData.tool_call_id);
+                  if (toolCall) {
+                    // Embed tool call data in a special text format
+                    const toolCallData = {
+                      name: toolCall.name,
+                      arguments: toolCall.arguments,
+                      result: eventData.result
+                    };
+                    
+                    const specialText = `__TOOL_CALL__:${JSON.stringify(toolCallData)}`;
+                    controller.enqueue(new TextEncoder().encode(`0:${JSON.stringify(specialText)}\n`));
+                    activeCalls.delete(eventData.tool_call_id);
+                  }
                   break;
                   
                 case 'text':
