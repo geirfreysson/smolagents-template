@@ -4,7 +4,12 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import List, Dict, Any
 import json
+import logging
 from agents import create_agent
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
@@ -33,32 +38,47 @@ class ChatRequest(BaseModel):
 @app.post("/api/chat")
 async def chat_endpoint(raw_request: FastAPIRequest):
     """Chat endpoint that streams responses from smolagents ToolCallingAgent."""
-    body = await raw_request.body()
-    print(f"Raw request body: {body}")
-    
     try:
         request_data = await raw_request.json()
-        print(f"Parsed JSON: {request_data}")
         request = ChatRequest(**request_data)
-        print(f"Validated request: {request}")
     except Exception as e:
-        print(f"Validation error: {e}")
         return {"error": str(e)}
     
     def generate_response():
         try:
-            # Create agent with streaming enabled
-            agent = create_agent()
+            # Create agent with streaming enabled and conversation history
+            # Convert conversation_history to the format expected by create_agent
+            history_for_agent = []
+            for msg in request.conversation_history:
+                msg_dict = {
+                    'role': msg.role,
+                    'content': msg.content
+                }
+                history_for_agent.append(msg_dict)
+            
+            agent = create_agent(conversation_history=history_for_agent)
             
             # Extract text from message format
             user_message = " ".join([part.text for part in request.message if part.type == "text"])
-            print(f"Processing message: {user_message}")
             
-            # Run agent in streaming mode
+            # Run agent in streaming mode with reset=False to preserve conversation history
             event_count = 0
-            for event in agent.run(user_message, stream=True):
+            for event in agent.run(user_message, stream=True, reset=False):
                 event_count += 1
                 event_type = type(event).__name__
+                
+                # Log detailed information about each event/chunk
+                logger.info(f"CHUNK #{event_count}: Event Type: {event_type}")
+                logger.info(f"CHUNK #{event_count}: Event Object: {event}")
+                
+                # Log specific attributes based on event type
+                if hasattr(event, 'content'):
+                    logger.info(f"CHUNK #{event_count}: Content: {getattr(event, 'content', 'N/A')}")
+                if hasattr(event, 'output'):
+                    logger.info(f"CHUNK #{event_count}: Output: {getattr(event, 'output', 'N/A')}")
+                if hasattr(event, 'name'):
+                    logger.info(f"CHUNK #{event_count}: Name: {getattr(event, 'name', 'N/A')}")
+                logger.info(f"CHUNK #{event_count}: " + "-"*50)
                 
                 # Handle different event types for frontend
                 if event_type == "ToolCall":
@@ -69,7 +89,6 @@ async def chat_endpoint(raw_request: FastAPIRequest):
                         "tool_arguments": event.arguments,
                         "tool_call_id": event.id
                     }
-                    print(f"🔧 Tool call starting: {event.name}")
                     yield f"0:{json.dumps(tool_call_data)}\n"
                 
                 elif event_type == "ToolOutput":
@@ -82,7 +101,6 @@ async def chat_endpoint(raw_request: FastAPIRequest):
                         "observation": event.observation,
                         "is_final_answer": event.is_final_answer
                     }
-                    print(f"✅ Tool call completed: {event.tool_call.name} -> {str(event.output)[:50]}...")
                     yield f"0:{json.dumps(tool_output_data)}\n"
                 
                 elif event_type == "ChatMessageStreamDelta":
@@ -101,7 +119,6 @@ async def chat_endpoint(raw_request: FastAPIRequest):
                             "type": "final_answer",
                             "content": str(event.output)
                         }
-                        print(f"🎯 Final answer: {str(event.output)[:50]}...")
                         yield f"0:{json.dumps(final_data)}\n"
                 
                 elif event_type == "FinalAnswerStep":
@@ -110,7 +127,6 @@ async def chat_endpoint(raw_request: FastAPIRequest):
                         "type": "final_result", 
                         "content": str(event.output)
                     }
-                    print(f"🏁 Final result: {str(event.output)[:50]}...")
                     yield f"0:{json.dumps(final_data)}\n"
                 
                 # Skip ActionStep and other internal events for now
@@ -118,12 +134,8 @@ async def chat_endpoint(raw_request: FastAPIRequest):
             
             # End of stream marker
             yield "d:\n"
-            print(f"\nCompleted streaming with {event_count} events")
             
         except Exception as e:
-            print(f"Error during streaming: {e}")
-            import traceback
-            traceback.print_exc()
             error_msg = f"Error: {str(e)}"
             yield f"0:{json.dumps({'type': 'error', 'message': error_msg})}\n"
             yield "d:\n"

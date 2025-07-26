@@ -4,6 +4,8 @@ from smolagents import tool
 def get_weather(location: str) -> str:
     """
     Get the current weather for a given location.
+
+    ONLY use this tool if the user has explicitly asked for the weather or if the weather can help solve the user's question.
     
     Args:
         location: The location to get weather for.
