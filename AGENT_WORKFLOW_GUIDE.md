@@ -21,7 +21,7 @@ smolagents-template/          # Main template repository (you maintain this)
 │   └── main.py              # Template core (don't modify in agents)
 └── frontend/                # Template core (don't modify in agents)
 
-my-first-agent/              # Agent repository (forked from template)
+my-first-agent/              # Agent repository (created from template)
 ├── backend/
 │   ├── tools.py             # YOUR agent-specific tools
 │   ├── agents.py            # From template (gets updated automatically)
@@ -34,43 +34,14 @@ my-first-agent/              # Agent repository (forked from template)
 
 ### Step 1: Create Agent Repository
 
-Since you can't fork your own repository, you have several options:
-
-#### Option A: GitHub CLI (Recommended)
-
 ```bash
 # Create new repo from template using GitHub CLI
-gh repo create weather-assistant --template yourusername/smolagents-template --private
+gh repo create your-agent-name --template yourusername/smolagents-template --private
 
 # Clone and navigate
-git clone https://github.com/yourusername/weather-assistant.git
-cd weather-assistant
+git clone https://github.com/yourusername/your-agent-name.git
+cd your-agent-name
 ```
-
-#### Option B: Manual Repository Creation
-
-1. **Go to GitHub** → Click "New repository"
-2. **Name it:** `weather-assistant` (or your agent name)  
-3. **Don't initialize** (no README, .gitignore, etc.)
-4. **Clone template and push to new repo:**
-
-```bash
-# Clone the template
-git clone https://github.com/yourusername/smolagents-template.git weather-assistant
-cd weather-assistant
-
-# Change the origin to your new repo
-git remote set-url origin https://github.com/yourusername/weather-assistant.git
-
-# Push to your new repo
-git push -u origin main
-```
-
-#### Option C: GitHub Template Feature
-
-1. **In your template repo** → Go to Settings
-2. **Check "Template repository"** box  
-3. **When creating new repos** → Select your template from "Repository template" dropdown
 
 ### Step 2: Add Upstream Remote
 
@@ -82,8 +53,8 @@ git remote add upstream https://github.com/yourusername/smolagents-template.git
 
 # Verify remotes
 git remote -v
-# origin    https://github.com/yourusername/weather-assistant.git (fetch)
-# origin    https://github.com/yourusername/weather-assistant.git (push)
+# origin    https://github.com/yourusername/your-agent-name.git (fetch)
+# origin    https://github.com/yourusername/your-agent-name.git (push)
 # upstream  https://github.com/yourusername/smolagents-template.git (fetch)
 # upstream  https://github.com/yourusername/smolagents-template.git (push)
 ```
@@ -94,7 +65,7 @@ Create a dedicated branch for your agent development:
 
 ```bash
 # Create and switch to agent branch
-git checkout -b agent/weather-assistant
+git checkout -b agent/your-agent-name
 
 # This is where you'll do all your agent-specific work
 ```
@@ -138,8 +109,8 @@ Commit your agent-specific changes:
 
 ```bash
 git add backend/tools.py
-git commit -m "feat: Add weather forecast and alert tools"
-git push origin agent/weather-assistant
+git commit -m "feat: Add your agent-specific tools"
+git push origin agent/your-agent-name
 ```
 
 ## Daily Development Workflow
@@ -148,7 +119,7 @@ git push origin agent/weather-assistant
 
 1. **Always work on your agent branch:**
    ```bash
-   git checkout agent/weather-assistant
+   git checkout agent/your-agent-name
    ```
 
 2. **Make changes only to agent-specific files:**
@@ -159,15 +130,14 @@ git push origin agent/weather-assistant
 
 3. **Test your changes:**
    ```bash
-   cd frontend && npm run dev &
-   cd backend && python main.py
+   make dev
    ```
 
 4. **Commit your work:**
    ```bash
    git add .
-   git commit -m "feat: Add new weather notification tool"
-   git push origin agent/weather-assistant
+   git commit -m "feat: Add new tool functionality"
+   git push origin agent/your-agent-name
    ```
 
 ## Updating Template Changes
@@ -189,7 +159,7 @@ Update your agent when:
 
 2. **Pull latest template changes:**
    ```bash
-   git pull upstream main
+   git pull upstream main --allow-unrelated-histories
    ```
 
 3. **Push updates to your fork:**
@@ -199,19 +169,12 @@ Update your agent when:
 
 4. **Switch back to agent branch:**
    ```bash
-   git checkout agent/weather-assistant
+   git checkout agent/your-agent-name
    ```
 
-5. **Merge or rebase template updates:**
-
-   **Option A: Merge (Recommended for beginners)**
+5. **Merge template updates:**
    ```bash
    git merge main
-   ```
-
-   **Option B: Rebase (Cleaner history)**
-   ```bash
-   git rebase main
    ```
 
 6. **Handle any conflicts:**
@@ -221,13 +184,12 @@ Update your agent when:
 
 7. **Test everything works:**
    ```bash
-   cd frontend && npm run dev &
-   cd backend && python main.py
+   make dev
    ```
 
 8. **Push updated agent:**
    ```bash
-   git push origin agent/weather-assistant
+   git push origin agent/your-agent-name
    ```
 
 ## Managing Multiple Agents
@@ -237,22 +199,16 @@ Update your agent when:
 For each new agent, repeat the repository creation process:
 
 ```bash
-# Option A: GitHub CLI (recommended)
-gh repo create email-assistant --template yourusername/smolagents-template --private
-git clone https://github.com/yourusername/email-assistant.git
-cd email-assistant
-
-# Option B: Manual creation (if not using GitHub CLI)
-git clone https://github.com/yourusername/smolagents-template.git email-assistant
-cd email-assistant
-git remote set-url origin https://github.com/yourusername/email-assistant.git
-git push -u origin main
+# Create new agent repository
+gh repo create new-agent-name --template yourusername/smolagents-template --private
+git clone https://github.com/yourusername/new-agent-name.git
+cd new-agent-name
 
 # Add upstream and create agent branch
 git remote add upstream https://github.com/yourusername/smolagents-template.git
-git checkout -b agent/email-assistant
+git checkout -b agent/new-agent-name
 
-# Customize tools.py for email functionality
+# Customize tools.py for your specific functionality
 # Commit and push
 ```
 
@@ -261,15 +217,15 @@ git checkout -b agent/email-assistant
 When you update the template, update all your agents:
 
 ```bash
-# Update weather-assistant
-cd weather-assistant
-git checkout main && git pull upstream main && git push origin main
-git checkout agent/weather-assistant && git merge main && git push origin agent/weather-assistant
+# Update agent-1
+cd agent-1
+git checkout main && git pull upstream main --allow-unrelated-histories && git push origin main
+git checkout agent/agent-1 && git merge main && git push origin agent/agent-1
 
-# Update email-assistant  
-cd ../email-assistant
-git checkout main && git pull upstream main && git push origin main
-git checkout agent/email-assistant && git merge main && git push origin agent/email-assistant
+# Update agent-2
+cd ../agent-2
+git checkout main && git pull upstream main --allow-unrelated-histories && git push origin main
+git checkout agent/agent-2 && git merge main && git push origin agent/agent-2
 ```
 
 ## File Guidelines
@@ -432,13 +388,13 @@ Create a script to update all your agents:
 #!/bin/bash
 # update-all-agents.sh
 
-AGENTS=("weather-assistant" "email-assistant" "task-manager")
+AGENTS=("agent-1" "agent-2" "agent-3")
 
 for agent in "${AGENTS[@]}"; do
     echo "Updating $agent..."
     cd "$agent"
     git checkout main
-    git pull upstream main
+    git pull upstream main --allow-unrelated-histories
     git push origin main
     git checkout "agent/$agent"
     git merge main
