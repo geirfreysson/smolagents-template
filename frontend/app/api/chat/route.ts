@@ -9,8 +9,19 @@ export async function POST(req: Request) {
   try {
     const { messages } = await req.json();
     
-    // Get the latest message from the user
-    const userMessage = messages[messages.length - 1]?.content || "";
+    // Get the latest message from the user and extract text properly
+    const latestMessage = messages[messages.length - 1];
+    let userMessageText = "";
+    
+    if (typeof latestMessage?.content === "string") {
+      userMessageText = latestMessage.content;
+    } else if (Array.isArray(latestMessage?.content)) {
+      // Extract text from content array format
+      userMessageText = latestMessage.content
+        .filter((part: any) => part.type === "text")
+        .map((part: any) => part.text)
+        .join(" ");
+    }
     
     // Prepare conversation history (exclude the latest message as it's sent separately)
     const conversationHistory = messages.slice(0, -1).map((msg: any) => ({
@@ -25,7 +36,7 @@ export async function POST(req: Request) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        message: userMessage,
+        message: [{ type: "text", text: userMessageText }],
         conversation_history: conversationHistory,
         context: {}
       }),
@@ -35,8 +46,72 @@ export async function POST(req: Request) {
       throw new Error(`Backend responded with status: ${response.status}`);
     }
 
-    // Return the streaming response directly to assistant-ui
-    return new Response(response.body, {
+    // Create a transform stream to convert backend events to assistant-ui format
+    const transformStream = new TransformStream({
+      start() {
+        // Track the current state
+        this.currentText = "";
+      },
+      
+      transform(chunk, controller) {
+        const decoder = new TextDecoder();
+        const text = decoder.decode(chunk);
+        
+        // Split by lines to handle multiple events in one chunk
+        const lines = text.split('\n');
+        
+        for (const line of lines) {
+          if (line.startsWith('0:')) {
+            try {
+              const eventData = JSON.parse(line.slice(2));
+              
+              switch (eventData.type) {
+                case 'tool_call_start':
+                  // Send tool call start notification
+                  const toolStartText = `\n\n🔧 **Calling tool: ${eventData.tool_name}**\nArguments: ${JSON.stringify(eventData.tool_arguments, null, 2)}\n\n`;
+                  controller.enqueue(new TextEncoder().encode(`0:${JSON.stringify(toolStartText)}\n`));
+                  break;
+                  
+                case 'tool_call_complete':
+                case 'tool_call_final':
+                  // Send tool completion with result
+                  const toolCompleteText = `✅ **${eventData.tool_name} completed**\nResult: ${eventData.result}\n\n`;
+                  controller.enqueue(new TextEncoder().encode(`0:${JSON.stringify(toolCompleteText)}\n`));
+                  break;
+                  
+                case 'text':
+                  // Forward text chunks directly
+                  controller.enqueue(new TextEncoder().encode(`0:${JSON.stringify(eventData.content)}\n`));
+                  break;
+                  
+                case 'final_answer':
+                case 'final_result':
+                  // Forward final answer
+                  controller.enqueue(new TextEncoder().encode(`0:${JSON.stringify(eventData.content)}\n`));
+                  break;
+                  
+                default:
+                  // Skip unknown event types
+                  console.log('Unknown event type:', eventData.type);
+                  break;
+              }
+            } catch (e) {
+              console.error('Failed to parse event:', line, e);
+              // Forward the line as-is if parsing fails
+              controller.enqueue(chunk);
+            }
+          } else if (line === 'd:') {
+            // Forward end-of-stream marker
+            controller.enqueue(new TextEncoder().encode('d:\n'));
+          }
+        }
+      }
+    });
+
+    // Pipe the backend response through our transform stream
+    const transformedStream = response.body?.pipeThrough(transformStream);
+
+    return new Response(transformedStream, {
       headers: {
         'Content-Type': 'text/plain; charset=utf-8',
         'Cache-Control': 'no-cache',
