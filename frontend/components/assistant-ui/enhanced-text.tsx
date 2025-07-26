@@ -1,6 +1,5 @@
 import { TextContentPartComponent } from "@assistant-ui/react";
-import { MarkdownTextPrimitive } from "@assistant-ui/react-markdown";
-import remarkGfm from "remark-gfm";
+import { MarkdownText } from "./markdown-text";
 import { ToolCallDisplay } from "./tool-call-display";
 import { ReactNode } from "react";
 
@@ -109,5 +108,5 @@ export const EnhancedText: TextContentPartComponent = (props) => {
   }
   
   // Regular markdown text
-  return <MarkdownTextPrimitive remarkPlugins={[remarkGfm]} className="aui-md" />;
+  return <MarkdownText />;
 };
