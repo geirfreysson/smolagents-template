@@ -91,3 +91,15 @@ When the tool is called, the front end will display the tool name and arguments 
 
 `frontend/lib/tool-display-names.ts`
 
+## Running the development servers
+
+```bash
+make dev
+``` 
+
+### Examples:
+  - `make dev FRONTEND_PORT=3001 BACKEND_PORT=8001` - Both with custom ports
+  - `make frontend FRONTEND_PORT=4000` - Frontend on port 4000
+  - `make backend BACKEND_PORT=9000` - Backend on port 9000
+  - `make help` - See all available options
+
