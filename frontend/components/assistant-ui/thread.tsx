@@ -4,8 +4,10 @@ import {
   ComposerPrimitive,
   MessagePrimitive,
   ThreadPrimitive,
+  useAssistantRuntime,
 } from "@assistant-ui/react";
 import type { FC } from "react";
+import { useRef, useEffect, useState } from "react";
 import {
   ArrowDownIcon,
   CheckIcon,
@@ -24,6 +26,69 @@ import { ToolFallback } from "./tool-fallback";
 import { EnhancedText } from "./enhanced-text";
 
 export const Thread: FC = () => {
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const runtime = useAssistantRuntime();
+  const [bottomPadding, setBottomPadding] = useState(0);
+
+  useEffect(() => {
+    const handleMessageSent = () => {
+      // Add bottom padding to enable scrolling
+      const viewportHeight = window.innerHeight;
+      setBottomPadding(viewportHeight);
+      
+      // Wait for React to re-render with the new padding before scrolling
+      setTimeout(() => {
+        if (viewportRef.current) {
+          // Find ALL user message bubbles (they have bg-muted class)
+          const userMessageBubbles = viewportRef.current.querySelectorAll('.bg-muted');
+          
+          if (userMessageBubbles.length > 0) {
+            // Get the LAST user message bubble
+            const lastUserBubble = userMessageBubbles[userMessageBubbles.length - 1] as HTMLElement;
+            
+            // Scroll the browser window to position user message near top
+            const rect = lastUserBubble.getBoundingClientRect();
+            const scrollTarget = window.scrollY + rect.top - 80;
+            
+            window.scrollTo({
+              top: scrollTarget,
+              behavior: 'smooth'
+            });
+          }
+        }
+      }, 300); // Wait for padding to be applied
+    };
+
+    // Use MutationObserver to watch for new messages being added to the DOM
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+          // Check if any added nodes contain user message bubbles
+          mutation.addedNodes.forEach((node) => {
+            if (node.nodeType === Node.ELEMENT_NODE) {
+              const element = node as Element;
+              const hasBgMuted = element.querySelector?.('.bg-muted') || element.classList?.contains('bg-muted');
+              if (hasBgMuted) {
+                handleMessageSent();
+              }
+            }
+          });
+        }
+      });
+    });
+
+    if (viewportRef.current) {
+      observer.observe(viewportRef.current, {
+        childList: true,
+        subtree: true
+      });
+    }
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
   return (
     <ThreadPrimitive.Root
       className="bg-background box-border flex h-full flex-col overflow-hidden"
@@ -31,24 +96,27 @@ export const Thread: FC = () => {
         ["--thread-max-width" as string]: "42rem",
       }}
     >
-      <ThreadPrimitive.Viewport className="flex h-full flex-col items-center overflow-y-scroll scroll-smooth bg-inherit px-4 pt-8">
-        <ThreadWelcome />
+      <ThreadPrimitive.Viewport 
+        ref={viewportRef}
+        className="h-full overflow-y-auto scroll-smooth bg-inherit px-4 pt-8"
+      >
+        <div className="flex flex-col items-center" style={{ paddingBottom: `${bottomPadding}px` }}>
+          <ThreadWelcome />
 
-        <ThreadPrimitive.Messages
-          components={{
-            UserMessage: UserMessage,
-            EditComposer: EditComposer,
-            AssistantMessage: AssistantMessage,
-          }}
-        />
+          <ThreadPrimitive.Messages
+            components={{
+              UserMessage: UserMessage,
+              EditComposer: EditComposer,
+              AssistantMessage: AssistantMessage,
+            }}
+          />
 
-        <ThreadPrimitive.If empty={false}>
-          <div className="min-h-8 flex-grow" />
-        </ThreadPrimitive.If>
+          <div className="min-h-8" />
 
-        <div className="sticky bottom-0 mt-3 flex w-full max-w-[var(--thread-max-width)] flex-col items-center justify-end rounded-t-lg bg-inherit pb-4">
-          <ThreadScrollToBottom />
-          <Composer />
+          <div className="mt-3 flex w-full max-w-[var(--thread-max-width)] flex-col items-center justify-end rounded-t-lg bg-inherit pb-4">
+            <ThreadScrollToBottom />
+            <Composer />
+          </div>
         </div>
       </ThreadPrimitive.Viewport>
     </ThreadPrimitive.Root>
