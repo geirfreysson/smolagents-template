@@ -8,23 +8,24 @@ def is_debug_mode():
 
 if __name__ == "__main__":
     debug = is_debug_mode()
+    port = int(os.getenv("PORT", 8000))
     
     # In debug mode, enable auto-reload and more verbose logging
     if debug:
-        print("🔧 Running in DEBUG mode with auto-reload enabled")
+        print(f"🔧 Running in DEBUG mode with auto-reload enabled on port {port}")
         uvicorn.run(
             "api:app",  # Use string import for reload to work
             host="0.0.0.0", 
-            port=8000,
+            port=port,
             reload=True,
             reload_dirs=["."],  # Watch current directory
             log_level="debug"
         )
     else:
-        print("🚀 Running in PRODUCTION mode")
+        print(f"🚀 Running in PRODUCTION mode on port {port}")
         uvicorn.run(
             app, 
             host="0.0.0.0", 
-            port=8000,
+            port=port,
             log_level="info"
         )
