@@ -76,7 +76,7 @@ export async function POST(req: Request) {
                   // Send complete tool call information as a single message part
                   const toolCall = activeCalls.get(eventData.tool_call_id);
                   if (toolCall) {
-                    // Embed tool call data in a special text format
+                    // Always send tool calls as cards first
                     const toolCallData = {
                       name: toolCall.name,
                       arguments: toolCall.arguments,
@@ -85,6 +85,8 @@ export async function POST(req: Request) {
                     
                     const specialText = `__TOOL_CALL__:${JSON.stringify(toolCallData)}`;
                     controller.enqueue(new TextEncoder().encode(`0:${JSON.stringify(specialText)}\n`));
+                    
+                    
                     activeCalls.delete(eventData.tool_call_id);
                   }
                   break;
@@ -96,8 +98,7 @@ export async function POST(req: Request) {
                   
                 case 'final_answer':
                 case 'final_result':
-                  // Forward final answer
-                  controller.enqueue(new TextEncoder().encode(`0:${JSON.stringify(eventData.content)}\n`));
+                  // Skip final answer events - the text chunks already contain the streaming content
                   break;
                   
                 default:

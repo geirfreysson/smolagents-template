@@ -82,6 +82,10 @@ async def chat_endpoint(raw_request: FastAPIRequest):
                 
                 # Handle different event types for frontend
                 if event_type == "ToolCall":
+                    # Skip final_answer tool calls as they're internal to smolagents
+                    if event.name == "final_answer":
+                        continue
+                    
                     # Tool is about to be called
                     tool_call_data = {
                         "type": "tool_call_start",
@@ -92,9 +96,21 @@ async def chat_endpoint(raw_request: FastAPIRequest):
                     yield f"0:{json.dumps(tool_call_data)}\n"
                 
                 elif event_type == "ToolOutput":
-                    # Tool call completed
+                    # For final_answer tool outputs, stream the content as text instead of showing tool call
+                    if event.tool_call.name == "final_answer":
+                        # Stream the final answer content as text
+                        final_content = str(event.output)
+                        for char in final_content:
+                            text_data = {
+                                "type": "text",
+                                "content": char
+                            }
+                            yield f"0:{json.dumps(text_data)}\n"
+                        continue
+                    
+                    # Only send tool_call_complete for the UI, don't stream the result as text later
                     tool_output_data = {
-                        "type": "tool_call_complete" if not event.is_final_answer else "tool_call_final", 
+                        "type": "tool_call_complete", 
                         "tool_name": event.tool_call.name,
                         "tool_call_id": event.id,
                         "result": event.output,
@@ -112,22 +128,8 @@ async def chat_endpoint(raw_request: FastAPIRequest):
                         }
                         yield f"0:{json.dumps(text_data)}\n"
                 
-                elif event_type == "ActionOutput":
-                    if event.is_final_answer:
-                        # Final answer from the agent
-                        final_data = {
-                            "type": "final_answer",
-                            "content": str(event.output)
-                        }
-                        yield f"0:{json.dumps(final_data)}\n"
-                
-                elif event_type == "FinalAnswerStep":
-                    # Final result
-                    final_data = {
-                        "type": "final_result", 
-                        "content": str(event.output)
-                    }
-                    yield f"0:{json.dumps(final_data)}\n"
+                # Skip ActionOutput and FinalAnswerStep events as they are redundant
+                # The text content is already streamed via ToolOutput->final_answer handling
                 
                 # Skip ActionStep and other internal events for now
                 # as they contain non-serializable objects

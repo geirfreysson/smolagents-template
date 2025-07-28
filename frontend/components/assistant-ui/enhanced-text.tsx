@@ -2,46 +2,25 @@ import { TextContentPartComponent } from "@assistant-ui/react";
 import { MarkdownText } from "./markdown-text";
 import { ToolCallDisplay } from "./tool-call-display";
 import { ReactNode } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { cn } from "@/lib/utils";
 
 export const EnhancedText: TextContentPartComponent = (props) => {
-  const text = props.text;
+  let text = props.text;
   
-  // Check if this text contains tool calls
+  // If text contains tool calls, we need to show both tool calls AND any final answer text
   if (typeof text === 'string' && text.includes('__TOOL_CALL__:')) {
-    // First pass: check if we have a final_answer tool
-    const hasFinalAnswer = text.includes('"name":"final_answer"');
-    
     const renderedParts: ReactNode[] = [];
     let currentIndex = 0;
+    let lastToolCallEnd = 0;
     
-    // Find all tool call markers and extract their JSON properly
+    // Process all tool calls first
     while (currentIndex < text.length) {
       const toolCallStart = text.indexOf('__TOOL_CALL__:', currentIndex);
       
       if (toolCallStart === -1) {
-        // No more tool calls, add remaining text only if we don't have a final_answer tool
-        // (since final_answer tool already displays the final response prominently)
-        const remainingText = text.slice(currentIndex).trim();
-        if (remainingText && !hasFinalAnswer) {
-          renderedParts.push(
-            <div key={`text-end`} className="prose">
-              {remainingText}
-            </div>
-          );
-        }
         break;
-      }
-      
-      // Add any text before the tool call (only if we don't have final_answer)
-      if (toolCallStart > currentIndex) {
-        const textBefore = text.slice(currentIndex, toolCallStart).trim();
-        if (textBefore && !hasFinalAnswer) {
-          renderedParts.push(
-            <div key={`text-${renderedParts.length}`} className="prose">
-              {textBefore}
-            </div>
-          );
-        }
       }
       
       // Extract the JSON by counting braces
@@ -96,6 +75,7 @@ export const EnhancedText: TextContentPartComponent = (props) => {
           />
         );
         
+        lastToolCallEnd = jsonEnd;
         currentIndex = jsonEnd;
       } catch (e) {
         console.error('Failed to parse tool call JSON:', e);
@@ -104,8 +84,41 @@ export const EnhancedText: TextContentPartComponent = (props) => {
       }
     }
     
+    // After processing tool calls, check if there's additional text (final answer)
+    const finalAnswerText = text.slice(lastToolCallEnd).trim();
+    console.log("🔍 DEBUG finalAnswerText:", JSON.stringify(finalAnswerText));
+    console.log("🔍 DEBUG finalAnswerText length:", finalAnswerText.length);
+    console.log("🔍 DEBUG finalAnswerText preview:", finalAnswerText.substring(0, 100));
+    
+    if (finalAnswerText && !finalAnswerText.includes('__TOOL_CALL__:')) {
+      renderedParts.push(
+        <div key="final-answer" className="prose max-w-none">
+          <ReactMarkdown 
+            remarkPlugins={[remarkGfm]}
+            components={{
+              table: ({ className, ...props }) => (
+                <table className={cn("my-5 w-full border-separate border-spacing-0 overflow-y-auto", className)} {...props} />
+              ),
+              th: ({ className, ...props }) => (
+                <th className={cn("bg-muted px-4 py-2 text-left font-bold first:rounded-tl-lg last:rounded-tr-lg [&[align=center]]:text-center [&[align=right]]:text-right", className)} {...props} />
+              ),
+              td: ({ className, ...props }) => (
+                <td className={cn("border-b border-l px-4 py-2 text-left last:border-r [&[align=center]]:text-center [&[align=right]]:text-right", className)} {...props} />
+              ),
+              tr: ({ className, ...props }) => (
+                <tr className={cn("m-0 border-b p-0 first:border-t [&:last-child>td:first-child]:rounded-bl-lg [&:last-child>td:last-child]:rounded-br-lg", className)} {...props} />
+              ),
+            }}
+          >
+            {finalAnswerText}
+          </ReactMarkdown>
+        </div>
+      );
+    }
+    
     return <div className="space-y-4">{renderedParts}</div>;
   }
+
   
   // Regular markdown text
   return <MarkdownText />;
