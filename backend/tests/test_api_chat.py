@@ -55,21 +55,6 @@ def test_chat_endpoint_streaming():
     # Check that final answer text doesn't contain TOOL_CALL JSON
     final_text = ''.join([e['content'] for e in text_events])
     
-    # Write raw response to file for analysis
-    with open("/Users/geirfreysson/Code/smolagents-template/backend/raw_streaming_response.txt", "w") as f:
-        f.write("=== RAW STREAMING RESPONSE ===\n")
-        f.write(f"Content length: {len(content)} characters\n")
-        f.write(f"Number of lines: {len(content.strip().split(chr(10)))}\n\n")
-        f.write("Raw content:\n")
-        f.write(content)
-        f.write("\n\n=== PARSED EVENTS ===\n")
-        for i, event in enumerate(events):
-            f.write(f"{i:3d}: {event}\n")
-        f.write(f"\n=== FINAL TEXT ===\n")
-        f.write(f"'{final_text}'\n")
-    
-    print(f"Raw streaming response written to: raw_streaming_response.txt")
-    print(f"Content length: {len(content)} chars, Events: {len(events)}, Final text length: {len(final_text)}")
-    
+
     assert 'TOOL_CALL' not in final_text, f"Final answer should not contain 'TOOL_CALL' but got: {final_text}"
     assert '{"name":"get_weather"' not in final_text, f"Final answer should not contain JSON tool call but got: {final_text}"
