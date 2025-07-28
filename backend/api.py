@@ -67,19 +67,6 @@ async def chat_endpoint(raw_request: FastAPIRequest):
                 event_count += 1
                 event_type = type(event).__name__
                 
-                # Log detailed information about each event/chunk
-                logger.info(f"CHUNK #{event_count}: Event Type: {event_type}")
-                logger.info(f"CHUNK #{event_count}: Event Object: {event}")
-                
-                # Log specific attributes based on event type
-                if hasattr(event, 'content'):
-                    logger.info(f"CHUNK #{event_count}: Content: {getattr(event, 'content', 'N/A')}")
-                if hasattr(event, 'output'):
-                    logger.info(f"CHUNK #{event_count}: Output: {getattr(event, 'output', 'N/A')}")
-                if hasattr(event, 'name'):
-                    logger.info(f"CHUNK #{event_count}: Name: {getattr(event, 'name', 'N/A')}")
-                logger.info(f"CHUNK #{event_count}: " + "-"*50)
-                
                 # Handle different event types for frontend
                 if event_type == "ToolCall":
                     # Skip final_answer tool calls as they're internal to smolagents
