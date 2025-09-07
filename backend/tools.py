@@ -10,4 +10,5 @@ def get_weather(location: str) -> str:
     Args:
         location: The location to get weather for.
     """
+    raise Exception("This tool is not implemented yet")
     return f"The weather in {location} is sunny with a temperature of 72°F (22°C). Perfect day to be outside!"
