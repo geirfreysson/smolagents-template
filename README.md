@@ -6,32 +6,33 @@ This is a full-stack AI assistant application template using the assistant-ui li
 - **Backend**: Python backend (separate service) that handles AI chat processing
 - **Architecture**: Frontend serves as a proxy to the Python backend via `/api/chat` route
 
-## Development Commands
+## Quick Start
 
-### Frontend (Next.js)
+### Install Dependencies
+
+Frontend:
 ```bash
 cd frontend
-npm run dev          # Start development server with Turbopack
-npm run build        # Build for production
-npm run start        # Start production server
-npm run lint         # Run ESLint
+npm install
 ```
 
-### Backend (Python)
+Backend:
 ```bash
 cd backend
-python main.py       # Start FastAPI server on port 8000
-pytest tests/        # Run backend tests
+uv sync
+```
+
+### Run Development Servers
+
+```bash
+make frontend    # Start frontend only
+make backend     # Start backend only
+make dev         # Start both servers
 ```
 
 ### Environment Setup
-Create `frontend/.env.local` with:
-```
-OPENAI_API_KEY=sk-your-key-here
-BACKEND_URL=http://localhost:8000  # Optional, defaults to localhost:8000
-```
 
-For the backend, set the environment variable:
+Set your OpenAI API key for the backend:
 ```bash
 export OPENAI_API_KEY=sk-your-key-here
 ```
@@ -51,21 +52,23 @@ export OPENAI_API_KEY=sk-your-key-here
 - `next.config.js` - Next.js configuration
 - `package.json` - Project dependencies and scripts
 
-## Installation
+## Additional Commands
 
 ### Frontend (Next.js)
 ```bash
 cd frontend
-npm install
+npm run build        # Build for production
+npm run start        # Start production server
+npm run lint         # Run ESLint
 ```
 
 ### Backend (Python)
 ```bash
 cd backend
-uv sync
+pytest tests/        # Run backend tests
 ```
 
-# Creating a new tool
+## Creating a new tool
 To create a new tool, add a new function to `backend/tools.py` using the `@tool` decorator. For example:
 ```python
 @tool
@@ -91,15 +94,14 @@ When the tool is called, the front end will display the tool name and arguments 
 
 `frontend/lib/tool-display-names.ts`
 
-## Running the development servers
+## Port Configuration
+
+You can customize the ports used by the development servers:
 
 ```bash
-make dev
-``` 
-
-### Examples:
-  - `make dev FRONTEND_PORT=3001 BACKEND_PORT=8001` - Both with custom ports
-  - `make frontend FRONTEND_PORT=4000` - Frontend on port 4000
-  - `make backend BACKEND_PORT=9000` - Backend on port 9000
-  - `make help` - See all available options
+make dev FRONTEND_PORT=3001 BACKEND_PORT=8001     # Both with custom ports
+make frontend FRONTEND_PORT=4000                  # Frontend on port 4000
+make backend BACKEND_PORT=9000                    # Backend on port 9000
+make help                                         # See all available options
+```
 
